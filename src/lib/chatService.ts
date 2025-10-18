@@ -2,16 +2,17 @@ import { Message, PersonalityMode } from '../types';
 import { personalities } from './personalities';
 
 export class ChatService {
-  private static async callOpenAI(
+  private static async callOpenRouter(
     message: string,
     personality: PersonalityMode,
     conversationHistory: Message[],
     onChunk?: (chunk: string) => void
   ): Promise<string> {
     const config = personalities[personality];
+    const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
-    if (!config.apiKey) {
-      throw new Error(`API key not configured for ${config.name} personality`);
+    if (!apiKey) {
+      throw new Error('OpenRouter API key not configured. Please add VITE_OPENROUTER_API_KEY to your .env file.');
     }
 
     const messages = [
@@ -24,14 +25,16 @@ export class ChatService {
     ];
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Obsidian Chat'
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: config.model,
           messages: messages,
           stream: !!onChunk,
           temperature: personality === 'analyst' ? 0.3 : personality === 'ghost' ? 0.2 : 0.7,
@@ -94,7 +97,7 @@ export class ChatService {
     conversationHistory: Message[] = [],
     onChunk?: (chunk: string) => void
   ): Promise<string> {
-    return await this.callOpenAI(message, personality, conversationHistory, onChunk);
+    return await this.callOpenRouter(message, personality, conversationHistory, onChunk);
   }
 
   static generateId(): string {

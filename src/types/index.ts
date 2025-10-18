@@ -20,5 +20,5 @@ export interface PersonalityConfig {
   description: string;
   systemPrompt: string;
   color: string;
-  apiKey: string;
+  model: string;
 }
