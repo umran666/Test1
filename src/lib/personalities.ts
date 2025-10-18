@@ -14,7 +14,7 @@ export const personalities: Record<PersonalityMode, PersonalityConfig> = {
     icon: 'ghost',
     description: 'Silent, efficient, minimal responses',
     systemPrompt: 'You are a minimal, efficient AI that provides concise, direct answers with no fluff. Be brief and to the point.',
-    color: '#888888',
+    color: '#ff0000',
     model: 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free'
   },
   oracle: {
