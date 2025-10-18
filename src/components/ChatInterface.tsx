@@ -50,6 +50,7 @@ export default function ChatInterface() {
       const response = await ChatService.sendMessage(
         userMessage.content,
         personality,
+        messages,
         (chunk) => setStreamingMessage(chunk)
       );
 
@@ -63,6 +64,13 @@ export default function ChatInterface() {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: ChatService.generateId(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`,
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
       setStreamingMessage('');

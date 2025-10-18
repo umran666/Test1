@@ -2,52 +2,99 @@ import { Message, PersonalityMode } from '../types';
 import { personalities } from './personalities';
 
 export class ChatService {
-  private static async simulateAIResponse(message: string, personality: PersonalityMode): Promise<string> {
+  private static async callOpenAI(
+    message: string,
+    personality: PersonalityMode,
+    conversationHistory: Message[],
+    onChunk?: (chunk: string) => void
+  ): Promise<string> {
     const config = personalities[personality];
 
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+    if (!config.apiKey) {
+      throw new Error(`API key not configured for ${config.name} personality`);
+    }
 
-    const responses: Record<PersonalityMode, string[]> = {
-      analyst: [
-        `Processing query: "${message}". Analysis suggests multiple optimization vectors.`,
-        'Data correlation detected. Running probabilistic assessment...',
-        'Query received. Initiating pattern recognition algorithms.',
-        'Input analyzed. Cross-referencing with knowledge base...'
-      ],
-      ghost: [
-        'Acknowledged.',
-        'Confirmed.',
-        'Understood.',
-        'Received.',
-        'Noted.'
-      ],
-      oracle: [
-        'The answer you seek lies not in what is said, but in what remains unspoken...',
-        'I perceive patterns beyond the immediate. Your question touches deeper truths.',
-        'The threads of possibility converge here. What you ask reveals more than you know.',
-        'In the silence between your words, I find clarity.'
-      ]
-    };
+    const messages = [
+      { role: 'system', content: config.systemPrompt },
+      ...conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      { role: 'user', content: message }
+    ];
 
-    const modeResponses = responses[personality];
-    return modeResponses[Math.floor(Math.random() * modeResponses.length)];
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: messages,
+          stream: !!onChunk,
+          temperature: personality === 'analyst' ? 0.3 : personality === 'ghost' ? 0.2 : 0.7,
+          max_tokens: personality === 'ghost' ? 150 : 1000
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'API request failed');
+      }
+
+      if (onChunk) {
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+
+                try {
+                  const parsed = JSON.parse(data);
+                  const content = parsed.choices[0]?.delta?.content;
+                  if (content) {
+                    fullResponse += content;
+                    onChunk(fullResponse);
+                  }
+                } catch (e) {
+                  console.error('Error parsing chunk:', e);
+                }
+              }
+            }
+          }
+        }
+
+        return fullResponse;
+      } else {
+        const data = await response.json();
+        return data.choices[0]?.message?.content || 'No response generated';
+      }
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
   }
 
   static async sendMessage(
     message: string,
     personality: PersonalityMode,
+    conversationHistory: Message[] = [],
     onChunk?: (chunk: string) => void
   ): Promise<string> {
-    const response = await this.simulateAIResponse(message, personality);
-
-    if (onChunk) {
-      for (let i = 0; i < response.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 30));
-        onChunk(response.slice(0, i + 1));
-      }
-    }
-
-    return response;
+    return await this.callOpenAI(message, personality, conversationHistory, onChunk);
   }
 
   static generateId(): string {
