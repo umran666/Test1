@@ -38,8 +38,15 @@ export class ChatService {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'DeepSeek API request failed');
+      const errorText = await response.text();
+      let errorMessage = 'DeepSeek API request failed';
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     return this.handleStreamResponse(response, onChunk);
@@ -91,8 +98,15 @@ export class ChatService {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Gemini API request failed');
+      const errorText = await response.text();
+      let errorMessage = 'Gemini API request failed';
+      try {
+        const error = JSON.parse(errorText);
+        errorMessage = error.error?.message || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     if (onChunk) {
@@ -153,6 +167,7 @@ export class ChatService {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        model: 'wizardlm-7b-uncensored',
         messages: messages,
         stream: !!onChunk,
         temperature: 0.2,
@@ -161,7 +176,8 @@ export class ChatService {
     });
 
     if (!response.ok) {
-      throw new Error('LM Studio API request failed. Make sure LM Studio is running.');
+      const errorText = await response.text();
+      throw new Error(`LM Studio API request failed: ${errorText}. Make sure LM Studio is running.`);
     }
 
     return this.handleStreamResponse(response, onChunk);
