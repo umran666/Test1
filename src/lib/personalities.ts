@@ -7,7 +7,7 @@ export const personalities: Record<PersonalityMode, PersonalityConfig> = {
     description: 'Logical, precise, data-driven insights',
     systemPrompt: 'You are an analytical AI assistant focused on providing precise, data-driven insights with logical reasoning.',
     color: '#00e0ff',
-    model: 'deepseek-reasoner'
+    model: 'gemini-1.5-flash'
   },
   ghost: {
     name: 'Ghost',

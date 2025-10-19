@@ -94,6 +94,12 @@ export default function ChatInterface() {
 
   const handlePersonalityChange = (newPersonality: PersonalityMode) => {
     setPersonality(newPersonality);
+    setMessages([]);
+    setStreamingMessage('');
+    if (!isEncrypted) {
+      ChatService.clearSession(sessionId.current);
+    }
+    sessionId.current = ChatService.generateId();
   };
 
   return (

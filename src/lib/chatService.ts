@@ -235,7 +235,7 @@ export class ChatService {
     try {
       switch (personality) {
         case 'analyst':
-          return await this.callDeepSeek(message, conversationHistory, config.systemPrompt, onChunk);
+          return await this.callGemini(message, conversationHistory, config.systemPrompt, onChunk);
         case 'oracle':
           return await this.callGemini(message, conversationHistory, config.systemPrompt, onChunk);
         case 'ghost':
